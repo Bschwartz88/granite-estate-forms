@@ -16,7 +16,14 @@ var state = {
 
 // ---------------------------------------------------- UI Helpers
 function $(id) { return document.getElementById(id); }
-function esc(s) { var d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML; }
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 var toastTimer = null;
 function toast(msg, isError) {
@@ -41,7 +48,8 @@ async function initApp() {
   var ack = localStorage.getItem('granite_disclaimer_ack') === 'true';
   $('disclaimer').classList.toggle('hidden', ack);
 
-  // Gemini API key check
+  // Gemini API key check & badge setup
+  updateKeyBadge();
   var key = localStorage.getItem('gemini_api_key');
   if (key) {
     $('keyCard').classList.add('hidden');
@@ -67,6 +75,35 @@ function ackDisclaimer() {
 }
 
 // ---------------------------------------------------- Gemini Key Management
+function updateKeyBadge() {
+  var key = localStorage.getItem('gemini_api_key');
+  var badge = $('keyBadge');
+  if (!badge) return;
+  if (key) {
+    badge.innerHTML = '<span class="key-pill ok" onclick="disconnectKey()" title="Click to disconnect API key">🔑 AI Connected</span>';
+  } else {
+    badge.innerHTML = '<span class="key-pill warn" onclick="showKeyCard()" title="Click to connect Gemini key">⚠️ Connect AI</span>';
+  }
+}
+
+function showKeyCard() {
+  $('keyCard').classList.remove('hidden');
+  $('geminiKey').focus();
+}
+
+function disconnectKey() {
+  if (confirm('Disconnect and remove your saved Gemini API key from this browser?')) {
+    localStorage.removeItem('gemini_api_key');
+    localStorage.removeItem('gemini_preferred_model');
+    $('geminiKey').value = '';
+    $('keyStatus').textContent = '';
+    $('keyStatus').className = '';
+    updateKeyBadge();
+    $('keyCard').classList.remove('hidden');
+    toast('Gemini API key removed from browser storage.');
+  }
+}
+
 async function saveKey() {
   var key = $('geminiKey').value.trim();
   if (!key) return toast('Paste your Gemini API key first.', true);
@@ -78,6 +115,7 @@ async function saveKey() {
   $('keyStatus').className = res.ok ? 'status-ok' : 'status-bad';
 
   if (res.ok) {
+    updateKeyBadge();
     toast('Gemini connected successfully!');
     setTimeout(function () {
       $('keyCard').classList.add('hidden');
@@ -220,6 +258,11 @@ async function handleFileUpload(files) {
 }
 
 function processSingleFile(file) {
+  var MAX_BYTES = 15 * 1024 * 1024; // 15MB limit to prevent browser memory exhaustion
+  if (file.size > MAX_BYTES) {
+    toast('File "' + file.name + '" exceeds the 15MB limit (' + Math.round(file.size / (1024 * 1024)) + 'MB).', true);
+    return Promise.resolve(null);
+  }
   return new Promise(function (resolve) {
     var reader = new FileReader();
     var isText = file.type.indexOf('text/') === 0 || /\.(txt|md|markdown|json)$/i.test(file.name);

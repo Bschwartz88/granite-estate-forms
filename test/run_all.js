@@ -6,6 +6,7 @@ require('./test_rules.js');
 require('./test_strategy.js');
 require('./test_assembly.js');
 require('./test_db.js');
+require('./test_security.js');
 
 setTimeout(function () {
   console.log('====================================================');

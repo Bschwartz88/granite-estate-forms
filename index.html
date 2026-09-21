@@ -3,14 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Granite Estate Forms — DIY NH Estate & Protective Planning</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://generativelanguage.googleapis.com; img-src 'self' data:;">
+  <title>Granite Estate Forms — DIY NH Estate &amp; Protective Planning</title>
   <link rel="stylesheet" href="app.css">
+  <script>
+    // Frame-busting / anti-clickjacking protection
+    if (window.top !== window.self) {
+      try { window.top.location = window.self.location; } catch (e) {}
+    }
+  </script>
 </head>
 <body>
 
 <header>
-  <h1>Granite Estate Forms <span style="font-weight:400;opacity:.8">· DIY NH Estate & Protective Planning</span></h1>
-  <span class="ver" id="ver">2026.09-WEB</span>
+  <h1>Granite Estate Forms <span style="font-weight:400;opacity:.8">· DIY NH Estate &amp; Protective Planning</span></h1>
+  <div style="display:flex; align-items:center; gap:10px;">
+    <span id="keyBadge"></span>
+    <span class="ver" id="ver">2026.09-WEB</span>
+  </div>
 </header>
 <div class="banner">Informational preparation tool only — not legal advice, not a law firm, no attorney–client relationship. All documents should be reviewed and executed with a New Hampshire-licensed attorney.</div>
 
@@ -37,10 +47,14 @@
   <!-- Settings: Gemini API Key -->
   <div class="card" id="keyCard">
     <h2>Connect Gemini AI for Document Reading</h2>
-    <p class="sub">Granite Estate is zero-knowledge and serverless. Your free API key from <b>aistudio.google.com</b> is stored only in your own browser's local storage and used directly from your machine.</p>
+    <p class="sub">Granite Estate is zero-knowledge and serverless. Your key from <b>aistudio.google.com</b> is stored only in this browser's local storage and used directly from your machine.</p>
+    <div style="background:#fff3cd; color:#856404; padding:10px 14px; border-radius:8px; font-size:12px; margin-bottom:14px; line-height:1.45; border:1px solid #ffeeba;">
+      <b>🔒 Privacy Notice:</b> Free-tier Google AI Studio API keys may be subject to Google prompt logging and quality review per Google terms. For confidential legal drafts with sensitive family or financial data, we recommend using a paid Google Cloud API key with data-logging disabled, or relying primarily on the built-in NH statutory form assembler.
+    </div>
     <div class="keyrow">
       <input type="password" id="geminiKey" placeholder="Paste your Gemini API key (AIzaSy...)">
       <button onclick="saveKey()">Connect &amp; Test</button>
+      <button type="button" class="ghost" onclick="disconnectKey()" id="disconnectBtn" style="white-space:nowrap;">Disconnect Key</button>
     </div>
     <p id="keyStatus"></p>
   </div>

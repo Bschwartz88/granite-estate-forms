@@ -366,14 +366,13 @@ var DB = (function () {
     });
   }
 
-  // ---------------------------------------------------- Audit Trail (Hash-chained)
+  // ---------------------------------------------------- Audit Trail (Cryptographic Hash-chained)
   function addAudit(event, detail, appVersion) {
     var ts = new Date().toISOString();
-    return new Promise(function (resolve) {
-      var last = memStore.audit[memStore.audit.length - 1];
-      var prevHash = last ? last.hash : 'GENESIS';
-      var payload = ts + '|' + event + '|' + detail + '|' + prevHash;
-      var hash = computeSha256Sync_(payload);
+    var last = memStore.audit[memStore.audit.length - 1];
+    var prevHash = last ? last.hash : 'GENESIS';
+    var payload = ts + '|' + event + '|' + detail + '|' + prevHash;
+    return computeSha256_(payload).then(function (hash) {
       var record = {
         ts: ts, event: event, detail: detail,
         app_version: appVersion || '2026.09-WEB',
@@ -385,18 +384,36 @@ var DB = (function () {
           idb.transaction('audit', 'readwrite').objectStore('audit').add(record);
         } catch (e) {}
       }
-      resolve(record);
+      return record;
     });
   }
 
-  function computeSha256Sync_(s) {
-    // Basic deterministic non-crypto fallback for hash chains if window.crypto is async
+  function computeSha256_(s) {
+    // 1. Browser Web Crypto API (Standard SHA-256)
+    if (typeof crypto !== 'undefined' && crypto.subtle && typeof TextEncoder !== 'undefined') {
+      try {
+        var enc = new TextEncoder().encode(s);
+        return crypto.subtle.digest('SHA-256', enc).then(function (buf) {
+          var arr = Array.from(new Uint8Array(buf));
+          return arr.map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+        });
+      } catch (e) {}
+    }
+    // 2. Node.js environment
+    if (typeof require !== 'undefined') {
+      try {
+        var c = require('crypto');
+        var hex = c.createHash('sha256').update(s).digest('hex');
+        return Promise.resolve(hex);
+      } catch (e) {}
+    }
+    // 3. Fallback deterministic checksum
     var h = 0x811c9dc5;
     for (var i = 0; i < s.length; i++) {
       h ^= s.charCodeAt(i);
       h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
     }
-    return ('0000000' + (h >>> 0).toString(16)).slice(-8);
+    return Promise.resolve('crc32-' + ('0000000' + (h >>> 0).toString(16)).slice(-8));
   }
 
   // ---------------------------------------------------- Reset
