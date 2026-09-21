@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Granite Estate Forms — DIY NH Estate & Protective Planning</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header>
+  <h1>Granite Estate Forms <span style="font-weight:400;opacity:.8">· DIY NH Estate & Protective Planning</span></h1>
+  <span class="ver" id="ver">2026.09-WEB</span>
+</header>
+<div class="banner">Informational preparation tool only — not legal advice, not a law firm, no attorney–client relationship. All documents should be reviewed and executed with a New Hampshire-licensed attorney.</div>
+
+<main id="app">
+  <div class="steps">
+    <span id="st1" class="on">1 · Goals &amp; Documents</span>
+    <span id="st2">2 · Findings &amp; Questions</span>
+    <span id="st3">3 · Plan Approval</span>
+    <span id="st4">4 · Attorney Brief</span>
+  </div>
+
+  <!-- Completed & Sealed Screen -->
+  <div class="card hidden" id="doneCard">
+    <div class="donebox">
+      <div class="big">✓</div>
+      <h2>Engagement Complete &amp; Sealed</h2>
+      <p class="sub">Your attorney preparation brief has been compiled and cryptographically sealed with a SHA-256 tamper-evident manifest.</p>
+      <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:16px 0;" id="doneLinks"></div>
+      <p class="sub" style="max-width:560px; margin:0 auto 16px;">Bring this brief to a New Hampshire-licensed attorney — it contains your client snapshot, document manifest, deficiency register with RSA citations, your answers, and open items.</p>
+      <button class="ghost" onclick="startNewEngagement()">Start a New Engagement</button>
+    </div>
+  </div>
+
+  <!-- Settings: Gemini API Key -->
+  <div class="card" id="keyCard">
+    <h2>Connect Gemini AI for Document Reading</h2>
+    <p class="sub">Granite Estate is zero-knowledge and serverless. Your free API key from <b>aistudio.google.com</b> is stored only in your own browser's local storage and used directly from your machine.</p>
+    <div class="keyrow">
+      <input type="password" id="geminiKey" placeholder="Paste your Gemini API key (AIzaSy...)">
+      <button onclick="saveKey()">Connect &amp; Test</button>
+    </div>
+    <p id="keyStatus"></p>
+  </div>
+
+  <!-- Step 1: Goal Intake -->
+  <div class="card" id="goalCard">
+    <h2>What do you want to accomplish?</h2>
+    <p class="sub">Plain English is perfect — e.g., “Make sure my will is valid, my spouse inherits the house, and my sister is backup guardian for our kids.”</p>
+    <textarea id="goals" placeholder="Describe your estate planning goals..."></textarea>
+    <label class="chk"><input type="checkbox" id="attest1"> I am a New Hampshire resident (domiciled in NH).</label>
+    <label class="chk"><input type="checkbox" id="attest2"> I am 18 or older and acting for myself (or as an authorized agent).</label>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px;">
+      <button id="beginBtn" onclick="startEng()">Begin</button>
+      <button type="button" class="ghost" onclick="openAssembleModal()">✨ No drafts yet? Start with NH Statutory Forms</button>
+    </div>
+  </div>
+
+  <!-- Step 1: Active Engagement Documents -->
+  <div class="card hidden" id="engCard">
+    <h2>Engagement <span class="pill" id="engId"></span></h2>
+    <p class="sub" id="engGoals"></p>
+
+    <div class="drop" id="drop" onclick="$('fileInput').click()">
+      <b>Drop your draft documents here</b> or click to choose files<br>
+      <span style="font-size:12px; color:#667;">Will, trust, advance directive, financial POA, deeds. Accepted: Text (.txt, .md), PDF, Word (.docx), photos.</span>
+      <input type="file" id="fileInput" multiple class="hidden" accept=".pdf,.docx,.doc,.txt,.md,.png,.jpg,.jpeg">
+    </div>
+
+    <div style="display:flex; align-items:center; margin:16px 0; gap:12px;">
+      <div style="flex:1; height:1px; background:var(--line);"></div>
+      <span style="font-size:11px; color:#888; text-transform:uppercase; letter-spacing:1px; font-weight:600;">OR</span>
+      <div style="flex:1; height:1px; background:var(--line);"></div>
+    </div>
+
+    <!-- Statutory Assembly Banner -->
+    <div style="border:1px solid #b2d5cc; background:var(--accent-lt); border-radius:10px; padding:16px; margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:260px;">
+          <b style="font-size:14px; color:var(--accent);">No drafts yet? Assemble official NH Statutory Forms</b>
+          <p style="font-size:12.5px; color:#445; margin:4px 0 0; line-height:1.45;">
+            Answer a few simple questions to automatically assemble complete, ready-to-review New Hampshire statutory forms: <b>RSA 137-J Advance Directive</b>, <b>RSA 564-E Financial POA</b>, <b>Simple Will</b> (with RSA 551:10 pretermitted heir protections), and optional <b>RSA 563-D Transfer on Death Deed</b>.
+          </p>
+        </div>
+        <button type="button" onclick="openAssembleModal()" style="white-space:nowrap; padding:9px 14px; font-size:13px;">
+          ✨ Build NH Statutory Forms
+        </button>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+      <span style="font-size:12.5px; font-weight:600; color:var(--granite);">Uploaded / Assembled Documents:</span>
+      <button class="btn-sm ghost" type="button" onclick="loadSampleDocuments()">Load Sample Test Documents</button>
+    </div>
+    <ul class="docs" id="docList"></ul>
+
+    <div style="margin-top:18px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <button id="analyzeBtn" onclick="analyze()">Run analysis →</button>
+      <span id="analyzeHint" style="font-size:12.5px; color:#888;">Upload at least one document to continue.</span>
+    </div>
+  </div>
+
+  <!-- Step 2 Part 1: Findings -->
+  <div class="card hidden" id="findingsCard">
+    <h2>Findings <span class="pill" id="fEngId"></span></h2>
+    <p class="sub">Your documents were evaluated against the New Hampshire statutory catalog (pack <span id="packVer"></span>). Each finding cites the relevant NH RSA statute — your attorney resolves these; nothing here requires action from you today.</p>
+    <p class="sumline" id="fSummary"></p>
+    <div id="fList"></div>
+    <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button id="continueBtn" onclick="startQs()">Continue → a few quick questions</button>
+      <button class="ghost" onclick="showUploads()">Add or update documents</button>
+    </div>
+  </div>
+
+  <!-- Step 2 Part 2: Clarification Questions -->
+  <div class="card hidden" id="qCard">
+    <h2>A few quick questions <span class="pill" id="qEngId"></span></h2>
+    <p class="sub">Everything else was resolved from your documents. These are the only items that need your input — <b>7 questions maximum, ever</b>. Skip anything you're unsure about; skipped items are flagged for your attorney rather than guessed.</p>
+    <div id="qList"></div>
+    <div style="margin-top:18px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <button id="submitQsBtn" onclick="submitQs()">Submit answers → build my plan</button>
+      <span style="font-size:12px; color:#888;">Unanswered questions are flagged as open items.</span>
+    </div>
+  </div>
+
+  <!-- Step 3: Preparation Plan -->
+  <div class="card hidden" id="planCard">
+    <h2>Preparation Plan <span class="pill" id="pEngId"></span></h2>
+    <p class="sub">This working plan organizes findings, client intentions, and open items for your attorney. Approving it confirms the brief should be assembled this way.</p>
+    <div id="pList"></div>
+    <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button id="approvePlanBtn" onclick="approveP()">Approve plan →</button>
+      <button class="ghost" onclick="toggleChange()">Request a change</button>
+    </div>
+    <div id="changeBox" class="hidden" style="margin-top:14px;">
+      <textarea id="changeText" style="min-height:70px;" placeholder="What should be different? e.g. 'My sister, not my brother, should be the backup guardian.'"></textarea>
+      <button class="ghost" style="margin-top:8px;" onclick="sendChange()">Add comment to plan</button>
+    </div>
+  </div>
+
+  <!-- Step 4: Attorney Brief -->
+  <div class="card hidden" id="briefCard">
+    <h2>Attorney Hand-off Brief <span class="pill" id="bEngId"></span></h2>
+    <div id="briefBuild">
+      <p class="sub">Your plan is approved. The final step compiles everything — goals, documents, statutory findings with RSA citations, your answers, and open items — into a structured attorney brief.</p>
+      <button id="buildBriefBtn" class="pulse" onclick="buildBrief()">Build attorney brief →</button>
+    </div>
+    <div id="briefReview" class="hidden">
+      <p class="sub">Review your brief below. When ready, click <b>Approve &amp; seal</b> to generate a tamper-evident cryptographic fingerprint.</p>
+      <div style="display:flex; gap:10px; margin-bottom:16px;" id="briefLinks"></div>
+      <div id="noteList"></div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button id="approveBriefBtn" onclick="approveB()">Approve &amp; seal →</button>
+        <button class="ghost" onclick="toggleNote()">Add note for attorney</button>
+      </div>
+      <div id="noteBox" class="hidden" style="margin-top:14px;">
+        <textarea id="noteText" style="min-height:70px;" placeholder="Anything you want your attorney to know — context, concerns, preferences."></textarea>
+        <button class="ghost" style="margin-top:8px;" onclick="sendNote()">Save note</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Statutory Form Assembly Modal -->
+<div class="modal-bg hidden" id="assembleModal">
+  <div class="modal modal-form">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <h2 style="margin:0; font-size:17px; color:var(--granite);">Assemble NH Statutory Documents</h2>
+      <button type="button" class="btn-del" onclick="closeAssembleModal()" title="Close">✕</button>
+    </div>
+    <p style="font-size:12.5px; color:#666; margin:0 0 14px; line-height:1.45;">
+      Answer these questions to automatically assemble complete, ready-to-review New Hampshire estate planning documents directly in your browser.
+    </p>
+
+    <div class="form-sec">1. You &amp; Domicile</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Your Full Legal Name *</label>
+        <input type="text" id="as_clientName" placeholder="e.g. Jane M. Doe">
+      </div>
+      <div class="form-group">
+        <label>NH City / Town *</label>
+        <input type="text" id="as_town" placeholder="e.g. Portsmouth" value="Portsmouth">
+      </div>
+      <div class="form-group">
+        <label>NH County</label>
+        <select id="as_county">
+          <option value="Belknap">Belknap</option>
+          <option value="Carroll">Carroll</option>
+          <option value="Cheshire">Cheshire</option>
+          <option value="Coos">Coos</option>
+          <option value="Grafton">Grafton</option>
+          <option value="Hillsborough">Hillsborough</option>
+          <option value="Merrimack">Merrimack</option>
+          <option value="Rockingham" selected>Rockingham</option>
+          <option value="Strafford">Strafford</option>
+          <option value="Sullivan">Sullivan</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-sec">2. Family &amp; Heirs (RSA 551:10 Protections)</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Marital Status</label>
+        <select id="as_marital" onchange="toggleSpouseField()">
+          <option value="married">Married</option>
+          <option value="unmarried">Unmarried / Single</option>
+          <option value="widowed">Widowed</option>
+          <option value="divorced">Divorced</option>
+        </select>
+      </div>
+      <div class="form-group" id="as_spouseGroup">
+        <label>Spouse Full Legal Name</label>
+        <input type="text" id="as_spouse" placeholder="e.g. John A. Doe">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Children (all living children, adult and minor)</label>
+      <div id="as_childrenList"></div>
+      <button type="button" class="ghost btn-sm" onclick="addChildRow('', false)" style="margin-top:4px;">+ Add Child</button>
+      <div style="font-size:11.5px; color:#667; margin-top:5px; line-height:1.4;">
+        <b>Note on NH RSA 551:10:</b> Under New Hampshire law, all children must be explicitly acknowledged in your will so they do not inadvertently claim an intestate share.
+      </div>
+    </div>
+
+    <div class="form-sec">3. Trusted Decision-Makers</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Will Executor (Primary)</label>
+        <input type="text" id="as_executor" placeholder="e.g. Spouse or trusted person">
+      </div>
+      <div class="form-group">
+        <label>Will Executor (Successor / Backup)</label>
+        <input type="text" id="as_executorSucc" placeholder="e.g. Sibling or trusted adult">
+      </div>
+    </div>
+
+    <div class="form-group" id="as_guardianGroup">
+      <label>Guardian for Minor Children (RSA 463)</label>
+      <input type="text" id="as_guardian" placeholder="e.g. Sibling or family member">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Health Care Agent (RSA 137-J)</label>
+        <input type="text" id="as_hcAgent" placeholder="Full name">
+      </div>
+      <div class="form-group">
+        <label>Health Care Agent Phone</label>
+        <input type="tel" id="as_hcPhone" placeholder="(603) 555-0100">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Alternate Health Care Agent</label>
+        <input type="text" id="as_hcAlt" placeholder="Backup full name">
+      </div>
+      <div class="form-group">
+        <label>Alternate Health Care Phone</label>
+        <input type="tel" id="as_hcAltPhone" placeholder="(603) 555-0101">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Financial Agent (POA - RSA 564-E)</label>
+        <input type="text" id="as_finAgent" placeholder="Full name">
+      </div>
+      <div class="form-group">
+        <label>Financial Agent Phone</label>
+        <input type="tel" id="as_finPhone" placeholder="(603) 555-0100">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Alternate Financial Agent</label>
+        <input type="text" id="as_finAlt" placeholder="Backup full name">
+      </div>
+      <div class="form-group">
+        <label>Alternate Financial Phone</label>
+        <input type="tel" id="as_finAltPhone" placeholder="(603) 555-0101">
+      </div>
+    </div>
+
+    <div class="form-sec">4. NH Real Estate (RSA 563-D Probate Avoidance)</div>
+    <label class="chk">
+      <input type="checkbox" id="as_hasRealEstate" onchange="toggleRealEstateFields()">
+      I own New Hampshire real estate.
+    </label>
+    <div id="as_reFields" class="hidden" style="margin-left:22px; margin-bottom:12px;">
+      <div class="form-group">
+        <label>Property Street Address</label>
+        <input type="text" id="as_reAddress" placeholder="e.g. 12 Elm Street, Portsmouth, NH">
+      </div>
+      <label class="chk">
+        <input type="checkbox" id="as_includeTODDeed" checked onchange="toggleTODBeneficiaryField()">
+        Generate an <b>RSA 563-D Transfer on Death (TOD) Deed</b> to pass this property directly outside probate without a trust.
+      </label>
+      <div class="form-group" id="as_todBeneficiaryGroup" style="margin-top:6px;">
+        <label>TOD Deed Beneficiary (who receives property upon death)</label>
+        <input type="text" id="as_todBeneficiary" placeholder="e.g. Spouse or children names">
+      </div>
+    </div>
+
+    <div class="form-sec">5. Estate Residue (RSA 561)</div>
+    <div class="form-group">
+      <label>How should everything else in your estate be distributed?</label>
+      <label class="chk"><input type="radio" name="as_residue" value="spouse_then_children" checked onchange="toggleResidueField()"> All to my spouse, then equally among my surviving children</label>
+      <label class="chk"><input type="radio" name="as_residue" value="all_to_children_equal" onchange="toggleResidueField()"> Equally among all my surviving children</label>
+      <label class="chk"><input type="radio" name="as_residue" value="custom" onchange="toggleResidueField()"> Custom distribution</label>
+      <textarea id="as_customResidue" class="hidden" placeholder="Describe your custom distribution..." style="min-height:55px; margin-top:6px;"></textarea>
+    </div>
+
+    <div style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end;">
+      <button type="button" class="ghost" onclick="closeAssembleModal()">Cancel</button>
+      <button type="button" id="assembleSubmitBtn" onclick="submitAssembleForm()">Generate Documents &amp; Begin →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Blocking Disclaimer Modal -->
+<div class="modal-bg hidden" id="disclaimer">
+  <div class="modal">
+    <h2>Before you begin</h2>
+    <p><b>Granite Estate is an informational document-preparation tool.</b> It is not a law firm, does not provide legal advice, and using it does not create an attorney–client relationship.</p>
+    <p>It compares your draft documents against New Hampshire statutory reference points (NH RSA) and prepares an organized brief for a <b>New Hampshire-licensed attorney</b>, who should review and supervise the execution of any estate planning documents.</p>
+    <p>This tool is designed for <b>simple NH estates</b> only. It will stop and refer you to an attorney if your situation appears outside that scope.</p>
+    <button onclick="ackDisclaimer()">I understand — continue</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Scripts (Vanilla JS, zero build step) -->
+<script src="js/rules.js"></script>
+<script src="js/strategy.js"></script>
+<script src="js/assembly.js"></script>
+<script src="js/db.js"></script>
+<script src="js/analysis.js"></script>
+<script src="js/app.js"></script>
+
+<script>
+  // Drag and drop setup for file upload
+  var dropEl = document.getElementById('drop');
+  var fileInputEl = document.getElementById('fileInput');
+
+  fileInputEl.addEventListener('change', function () {
+    if (fileInputEl.files.length) {
+      handleFileUpload(fileInputEl.files);
+      fileInputEl.value = '';
+    }
+  });
+
+  ['dragover', 'dragenter'].forEach(function (ev) {
+    dropEl.addEventListener(ev, function (e) { e.preventDefault(); dropEl.classList.add('over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    dropEl.addEventListener(ev, function (e) { e.preventDefault(); dropEl.classList.remove('over'); });
+  });
+  dropEl.addEventListener('drop', function (e) {
+    if (e.dataTransfer.files.length) {
+      handleFileUpload(e.dataTransfer.files);
+    }
+  });
+</script>
+
+</body>
+</html>
