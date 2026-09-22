@@ -44,31 +44,72 @@
     </div>
   </div>
 
-  <!-- Settings: Gemini API Key -->
-  <div class="card" id="keyCard">
-    <h2>Connect Gemini AI for Document Reading</h2>
-    <p class="sub">Granite Estate is zero-knowledge and serverless. Your key from <b>aistudio.google.com</b> is stored only in this browser's local storage and used directly from your machine.</p>
-    <div style="background:#fff3cd; color:#856404; padding:10px 14px; border-radius:8px; font-size:12px; margin-bottom:14px; line-height:1.45; border:1px solid #ffeeba;">
-      <b>🔒 Privacy Notice:</b> Free-tier Google AI Studio API keys may be subject to Google prompt logging and quality review per Google terms. For confidential legal drafts with sensitive family or financial data, we recommend using a paid Google Cloud API key with data-logging disabled, or relying primarily on the built-in NH statutory form assembler.
+  <!-- AI key. Hidden by default; shown only when reading a file requires it. -->
+  <div class="card hidden" id="keyCard">
+    <h2>Connect Google AI to read your documents</h2>
+    <p class="sub">
+      Granite Estate runs entirely in this browser — there is no Granite server and no account.
+      To <b>read</b> an uploaded PDF, scan or photo, it needs Google's AI, which requires a free key from
+      <b>aistudio.google.com</b>. The key is stored only in this browser and is sent only to Google.
+    </p>
+    <div class="privacy-notice">
+      <b>🔒 Read this before you paste a key.</b>
+      Your documents do not reach a Granite server — but they do go to Google, in full.
+      On Google's <b>free</b> tier, Google's terms state that human reviewers may read API input and output,
+      and that you should <b>not submit sensitive, confidential or personal information</b> to the unpaid service.
+      A will, a trust or a POA is exactly that kind of information.
+      <br><br>
+      For confidential family or financial drafts, either use a <b>paid</b> Google Cloud API key with data logging
+      disabled, or skip the key entirely: the NH statutory form builder and the offline document check below both
+      work with no key and send nothing anywhere.
+      <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">Google's API terms</a>
     </div>
     <div class="keyrow">
       <input type="password" id="geminiKey" placeholder="Paste your Gemini API key (AIzaSy...)">
       <button onclick="saveKey()">Connect &amp; Test</button>
-      <button type="button" class="ghost" onclick="disconnectKey()" id="disconnectBtn" style="white-space:nowrap;">Disconnect Key</button>
+      <button type="button" class="ghost" onclick="disconnectKey()" id="disconnectBtn" style="white-space:nowrap;">Remove key</button>
+      <button type="button" class="ghost" onclick="hideKeyCard()" style="white-space:nowrap;">Not now</button>
     </div>
     <p id="keyStatus"></p>
   </div>
 
-  <!-- Step 1: Goal Intake -->
+  <!-- Step 1: Goal Intake. One question first; the AI key is never mentioned here. -->
   <div class="card" id="goalCard">
-    <h2>What do you want to accomplish?</h2>
-    <p class="sub">Plain English is perfect — e.g., “Make sure my will is valid, my spouse inherits the house, and my sister is backup guardian for our kids.”</p>
-    <textarea id="goals" placeholder="Describe your estate planning goals..."></textarea>
-    <label class="chk"><input type="checkbox" id="attest1"> I am a New Hampshire resident (domiciled in NH).</label>
-    <label class="chk"><input type="checkbox" id="attest2"> I am 18 or older and acting for myself (or as an authorized agent).</label>
-    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px;">
-      <button id="beginBtn" onclick="startEng()">Begin</button>
-      <button type="button" class="ghost" onclick="openAssembleModal()">✨ No drafts yet? Start with NH Statutory Forms</button>
+    <h2>Granite Estate Forms</h2>
+    <p class="sub intro-lede">
+      A free tool for New Hampshire residents preparing an estate plan. It builds official NH statutory
+      documents, checks drafts you already have against NH law, and organizes everything into one packet
+      for a New Hampshire attorney. Everything happens in this browser.
+    </p>
+
+    <div class="start-choice">
+      <div class="start-q">Where are you starting from?</div>
+      <div class="start-paths">
+        <button type="button" class="path-btn primary-path" onclick="openAssembleModal()">
+          <b>I'm starting from scratch</b>
+          <span>Answer questions about your family and wishes. Granite builds your will, advance directive,
+          financial power of attorney and, if you own NH property, a transfer-on-death deed — ready to print.
+          No AI key needed, nothing leaves this browser.</span>
+        </button>
+        <button type="button" class="path-btn" onclick="focusGoals()">
+          <b>I already have documents</b>
+          <span>Upload or paste a will, trust, POA or advance directive and have it checked against New
+          Hampshire statutes. Text files are checked offline; PDFs and photos need a free Google AI key.</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="goalsBlock">
+      <h3 class="goals-h">What do you want to accomplish?</h3>
+      <p class="sub">Plain English is perfect — e.g., “Make sure my will is valid, my spouse inherits the house, and my sister is backup guardian for our kids.”</p>
+      <textarea id="goals" placeholder="Describe your estate planning goals..."></textarea>
+      <p class="attest-line" id="attestLine">
+        By continuing, you confirm you are 18 or older, are domiciled in New Hampshire, and are acting for
+        yourself or as an authorized agent. This is recorded in your attorney packet.
+      </p>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px;">
+        <button id="beginBtn" onclick="startEng()">Continue</button>
+      </div>
     </div>
   </div>
 
@@ -79,8 +120,9 @@
 
     <div class="drop" id="drop" onclick="$('fileInput').click()">
       <b>Drop your draft documents here</b> or click to choose files<br>
-      <span style="font-size:12px; color:#667;">Will, trust, advance directive, financial POA, deeds. Accepted: Text (.txt, .md), PDF, Word (.docx), photos.</span>
-      <input type="file" id="fileInput" multiple class="hidden" accept=".pdf,.docx,.doc,.txt,.md,.png,.jpg,.jpeg">
+      <span style="font-size:12px; color:#667;">Will, trust, advance directive, financial POA, deeds.<br>
+      <b>Text files (.txt, .md) can be checked with no AI key.</b> PDFs and photos need a free Google AI key to be read.</span>
+      <input type="file" id="fileInput" multiple class="hidden" accept=".pdf,.txt,.md,.png,.jpg,.jpeg">
     </div>
 
     <div style="display:flex; align-items:center; margin:16px 0; gap:12px;">
@@ -106,13 +148,17 @@
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
       <span style="font-size:12.5px; font-weight:600; color:var(--granite);">Uploaded / Assembled Documents:</span>
-      <button class="btn-sm ghost" type="button" onclick="loadSampleDocuments()">Load Sample Test Documents</button>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn-sm ghost hidden" type="button" id="printAllBtn" onclick="printAllDocs()">🖨️ Print / save all</button>
+        <button class="btn-sm ghost" type="button" onclick="loadSampleDocuments()">Load sample documents</button>
+      </div>
     </div>
     <ul class="docs" id="docList"></ul>
 
     <div style="margin-top:18px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-      <button id="analyzeBtn" onclick="analyze()">Run analysis →</button>
-      <span id="analyzeHint" style="font-size:12.5px; color:#888;">Upload at least one document to continue.</span>
+      <button id="analyzeBtn" onclick="analyze()">Check my documents →</button>
+      <span id="analyzeHint" style="font-size:12.5px; color:#888;">Add at least one document to continue.</span>
+      <button type="button" class="btn-sm ghost" onclick="showKeyCard()">Connect Google AI for PDFs &amp; photos</button>
     </div>
   </div>
 
@@ -121,6 +167,7 @@
     <h2>Findings <span class="pill" id="fEngId"></span></h2>
     <p class="sub">Your documents were evaluated against the New Hampshire statutory catalog (pack <span id="packVer"></span>). Each finding cites the relevant NH RSA statute — your attorney resolves these; nothing here requires action from you today.</p>
     <p class="sumline" id="fSummary"></p>
+    <div id="analysisModeNote" class="mode-note"></div>
     <div id="fList"></div>
     <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
       <button id="continueBtn" onclick="startQs()">Continue → a few quick questions</button>
@@ -164,6 +211,7 @@
     <div id="briefReview" class="hidden">
       <p class="sub">Review your brief below. When ready, click <b>Approve &amp; seal</b> to generate a tamper-evident cryptographic fingerprint.</p>
       <div style="display:flex; gap:10px; margin-bottom:16px;" id="briefLinks"></div>
+      <div id="briefBody" class="brief-doc"></div>
       <div id="noteList"></div>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <button id="approveBriefBtn" onclick="approveB()">Approve &amp; seal →</button>
@@ -347,6 +395,34 @@
   </div>
 </div>
 
+<!-- Full document viewer. Body is injected with textContent, never innerHTML. -->
+<div class="modal-bg hidden" id="docViewModal">
+  <div class="modal modal-form">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px;">
+      <h2 style="margin:0; font-size:16px; color:var(--granite); word-break:break-word;" id="docViewTitle"></h2>
+      <button type="button" class="btn-del" onclick="closeDocView()" title="Close">✕</button>
+    </div>
+    <pre class="doc-view-body" id="docViewBody"></pre>
+    <div style="display:flex; justify-content:flex-end; margin-top:12px;">
+      <button type="button" class="ghost" onclick="closeDocView()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Print target for individual documents (see .printing-doc in app.css). -->
+<div id="printDocArea" aria-hidden="true">
+  <h1 id="printDocTitle"></h1>
+  <pre id="printDocBody"></pre>
+</div>
+
+<footer class="data-footer">
+  <div>
+    <b>Your data stays in this browser.</b>
+    Documents and findings are stored only on this device. Nothing is sent to a Granite server — there isn't one.
+  </div>
+  <button type="button" class="btn-sm btn-del-outline" onclick="clearAllData()">Erase all my data from this browser</button>
+</footer>
+
 <div class="toast" id="toast"></div>
 
 <!-- Scripts (Vanilla JS, zero build step) -->
@@ -355,6 +431,7 @@
 <script src="js/assembly.js"></script>
 <script src="js/db.js"></script>
 <script src="js/analysis.js"></script>
+<script src="js/local-extract.js"></script>
 <script src="js/app.js"></script>
 
 <script>

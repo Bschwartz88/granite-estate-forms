@@ -153,6 +153,34 @@ var DB = (function () {
     });
   }
 
+  /**
+   * Permanently remove a document AND any extraction derived from it.
+   * Previously the UI filtered an in-memory array only, so a deleted draft
+   * silently survived in IndexedDB and returned on reload.
+   */
+  function deleteDocument(docId) {
+    if (!idb) {
+      memStore.documents = memStore.documents.filter(function (d) { return d.id !== docId; });
+      memStore.extractions = memStore.extractions.filter(function (x) { return x.doc_id !== docId; });
+      return Promise.resolve(true);
+    }
+    return new Promise(function (resolve) {
+      var t = idb.transaction(['documents', 'extractions'], 'readwrite');
+      t.objectStore('documents').delete(docId);
+      // Cursor delete: generated keys are NOT positional, so never delete by
+      // array index — that would remove an unrelated extraction.
+      var curReq = t.objectStore('extractions').openCursor();
+      curReq.onsuccess = function (ev) {
+        var cursor = ev.target.result;
+        if (!cursor) return;
+        if (cursor.value && cursor.value.doc_id === docId) cursor.delete();
+        cursor.continue();
+      };
+      t.oncomplete = function () { resolve(true); };
+      t.onerror = function () { resolve(false); };
+    });
+  }
+
   // ---------------------------------------------------- Extractions
   function saveExtraction(docId, engagementId, facts) {
     var item = { doc_id: docId, engagement_id: engagementId, extracted: new Date().toISOString(), facts: facts };
@@ -445,6 +473,7 @@ var DB = (function () {
     setEngagementStatus: setEngagementStatus,
     saveDocument: saveDocument,
     listDocuments: listDocuments,
+    deleteDocument: deleteDocument,
     saveExtraction: saveExtraction,
     listExtractions: listExtractions,
     saveDeficiencies: saveDeficiencies,

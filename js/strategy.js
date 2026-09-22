@@ -32,7 +32,7 @@ function harvestPeople_(facts) {
     var w = f.will || {}, t = f.trust || {}, a = f.ad || {}, p = f.poa || {};
     [f.spouse, w.executor, w.successor_executor, w.guardian_name,
      t.trustee, t.successor_trustee, a.agent, a.alternate_agent,
-     p.agent, p.successor_agent]
+     p.agent, p.successor_agent, p.alternate_agent]
       .forEach(function (n) { maybeAdult(n); });
     (w.beneficiaries || []).concat(t.beneficiaries || []).forEach(function (b) { maybeAdult(b && b.name); });
     (w.witness_names || []).forEach(function (n) { maybeAdult(n); });

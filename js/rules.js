@@ -266,7 +266,7 @@ var RULES = [
     plain: 'If your primary financial agent is unable or unwilling to act, no backup successor agent is designated.',
     note: 'Single financial agent named without alternate; recommend designating successor agent per RSA 564-E:111.',
     applies: function (f) { return (f.doc_type === 'financial_poa' || (f.poa && f.poa.agent)) && f.poa && f.poa.agent; },
-    failed: function (f) { return !f.poa.successor_agent; }
+    failed: function (f) { return !(f.poa.successor_agent || f.poa.alternate_agent); }
   },
   {
     id: 'P-03', matter: 'poa', severity: 'high',

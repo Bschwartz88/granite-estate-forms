@@ -180,6 +180,9 @@ async function geminiExtract_(text, filename, base64Part) {
   facts.all_children = facts.all_children || [];
   facts.real_estate_nh = facts.real_estate_nh || [];
   facts.will = facts.will || {}; facts.trust = facts.trust || {}; facts.ad = facts.ad || {}; facts.poa = facts.poa || {};
+  // Provenance (PRD FR-ARCH-3) — how these facts were derived, carried into the brief.
+  facts.extraction_source = 'gemini';
+  facts.extraction_engine = getPreferredModel_();
   return facts;
 }
 

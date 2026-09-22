@@ -32,6 +32,7 @@ server.listen(PORT, async () => {
       '/js/assembly.js',
       '/js/db.js',
       '/js/analysis.js',
+  '/js/local-extract.js',
       '/js/app.js',
       '/test-documents/TEST_Will_Draft_Sam_Whitfield.txt'
     ];

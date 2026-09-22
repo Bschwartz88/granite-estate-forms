@@ -7,6 +7,7 @@ require('./test_strategy.js');
 require('./test_assembly.js');
 require('./test_db.js');
 require('./test_security.js');
+require('./test_local_extract.js');
 
 setTimeout(function () {
   console.log('====================================================');
