@@ -73,4 +73,43 @@ const poaIds = R.runRules_([poaFacts]).map(d => d.rule_id || d.ruleId);
 assert(poaIds.indexOf('P-02B') === -1,
   'P-02B does NOT report a missing successor agent when alternate_agent is named');
 
+// 8. Granite must not report false deficiencies against its OWN assembled
+//    documents. Statutory forms use label lines ("Primary Health Care Agent: X")
+//    and blank execution blocks ("Witness 1 Signature: ____"); a name must never
+//    run across a line break and swallow the next line's label.
+const A = require(path.join(ROOT, 'js/assembly.js'));
+const assembled = A.assembleAllDocuments({
+  clientName: 'Jane M. Doe', town: 'Portsmouth', county: 'Rockingham',
+  maritalStatus: 'married', spouseName: 'John A. Doe',
+  children: [{ name: 'Sam Doe', isMinor: true }],
+  executorName: 'John A. Doe', executorSuccessor: 'Ann Roe', guardianName: 'Ann Roe',
+  hcAgentName: 'Mary Doe', hcAgentAlternate: 'Bea Fox',
+  finAgentName: 'John A. Doe', finAgentAlternate: 'Ann Roe',
+  hasRealEstate: true, realEstateAddress: '12 Elm St, Portsmouth, NH',
+  includeTODDeed: true, todBeneficiary: 'Sam Doe', residuePlan: 'spouse_then_children'
+});
+const selfFacts = assembled.map(d => {
+  const f = L.localExtract_(d.content, d.filename);
+  f._doc = { filename: d.filename };
+  return f;
+});
+const willF = selfFacts.find(f => f.doc_type === 'will');
+const adF   = selfFacts.find(f => f.doc_type === 'advance_directive');
+const poaF  = selfFacts.find(f => f.doc_type === 'financial_poa');
+
+assert(willF.will.executor === 'John A. Doe', 'Executor read from "appoint X as the Executor"');
+assert(willF.will.witness_count >= 2, 'Both witness signature blocks counted (got ' + willF.will.witness_count + ')');
+assert(adF.ad.agent === 'Mary Doe', 'Health care agent read from a label line without swallowing the next line');
+assert(adF.ad.alternate_agent === 'Bea Fox', 'Alternate health care agent read from its label line');
+assert(poaF.poa.agent === 'John A. Doe', 'Financial agent read from "Primary Agent:" label');
+assert(poaF.poa.successor_agent === 'Ann Roe', 'Successor financial agent read from its own label line');
+assert(willF.will.beneficiaries.some(b => b.name === 'John A. Doe'),
+  'Residuary taker captured as a beneficiary (long-form "rest, residue and remainder ... to my spouse, X")');
+
+const selfDefs = R.runRules_(selfFacts);
+const criticals = selfDefs.filter(d => d.severity === 'critical');
+assert(criticals.length === 0,
+  'No CRITICAL findings against Granite\'s own assembled documents (got ' +
+  criticals.map(d => (d.rule_id || d.ruleId)).join(', ') + ')');
+
 console.log('All local-extract.js tests passed successfully!');

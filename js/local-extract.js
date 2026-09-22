@@ -26,7 +26,10 @@
 var LOCAL_EXTRACTOR_VERSION = 'local-1.0.0';
 
 /* A personal name: a capitalised word, then up to 3 more words or initials. */
-var NAME_RE = "([A-Z][a-z'\\-][a-zA-Z'\\-]*(?:\\s+(?:[A-Z]\\.|[A-Z][a-zA-Z'\\-]+)){0,3})";
+// Words within a name are joined by HORIZONTAL space only. Using \s+ here lets a
+// name run across a line break and swallow the next line's label (e.g.
+// "Mary Doe\nPhone:" -> "Mary Doe Phone"), which the stopword filter then rejects.
+var NAME_RE = "([A-Z][a-z'\\-][a-zA-Z'\\-]*(?:[ \\t]+(?:[A-Z]\\.|[A-Z][a-zA-Z'\\-]+)){0,3})";
 
 /* Case-insensitive literal, without the /i flag that would break NAME_RE. */
 function ci_(word) {
@@ -146,14 +149,16 @@ function classifyLocal_(text, filename) {
 }
 
 function countWitnessSlots_(text) {
-  var slots = (text.match(/[Ww][Ii][Tt][Nn][Ee][Ss][Ss]\s*(?:#?\s*\d)?\s*[:\-_]/g) || []).length;
-  var named = (text.match(/[Ss]igned in the presence/g) || []).length;
+  // Matches "WITNESS:", "Witness 2 -", and statutory execution blocks such as
+  // "Witness 1 Signature: ______" / "Witness 2 Printed Name: ______".
+  var slots = (text.match(/witness\s*(?:#?\s*\d)?\s*(?:printed\s+)?(?:signature|name|address)?\s*[:\-_]/gi) || []).length;
+  var named = (text.match(/signed in the presence/gi) || []).length;
   return Math.max(slots, named ? 1 : 0);
 }
 
 function extractWill_(text) {
   var witnessNames = [];
-  var wre = new RegExp('(?:' + ci_('witness') + '\\s*(?:#?\\s*\\d)?\\s*[:\\-]\\s*|' + ci_('signed in the presence of the testator by') + '\\s*[:\\-]?\\s*(?:_+\\s*)?)' + NAME_RE, 'g');
+  var wre = new RegExp('(?:' + ci_('witness') + '\\s*(?:#?\\s*\\d)?[ \\t]*[:\\-][ \\t]*|' + ci_('signed in the presence of the testator by') + '[ \\t]*[:\\-]?[ \\t]*(?:_+\\s*)?)' + NAME_RE, 'g');
   var m;
   while ((m = wre.exec(text)) !== null) {
     var wn = cleanName_(m[1]);
@@ -161,7 +166,8 @@ function extractWill_(text) {
   }
 
   var beneficiaries = [];
-  var bre = new RegExp(ci_('i give') + '[^.]{0,100}?' + ci_('to') + '\\s+(?:' + ci_('my') + '\\s+[a-z]+,?\\s+)?' + NAME_RE, 'g');
+  var bre = new RegExp('(?:' + ci_('i give') + '|' + ci_('i devise') + '|' + ci_('i bequeath') + ')'
+    + '[^.]{0,220}?' + ci_('to') + '[ \\t]+(?:' + ci_('my') + '[ \\t]+[a-z]+,?[ \\t]+)?' + NAME_RE, 'g');
   while ((m = bre.exec(text)) !== null) {
     var bn = cleanName_(m[1]);
     if (bn && !beneficiaries.some(function (b) { return b.name === bn; })) {
@@ -177,18 +183,18 @@ function extractWill_(text) {
       && lx_has_(text, /[Nn]otary|[Jj]ustice of the [Pp]eace|subscribed and sworn/i),
     revocation_clause: lx_has_(text, /[Rr]evoke[s]?\s+(?:any\s+and\s+)?all\s+(?:prior|former|previous)|[Rr]evoke all wills|[Rr]evoking all prior/i),
     executor: lx_first_(text, [
-      new RegExp(ci_('appoint') + '\\s+(?:' + ci_('my') + '\\s+[a-z]+,?\\s+)?' + NAME_RE + '[^.]{0,40}?' + ci_('as') + '\\s+(?:' + ci_('my') + '\\s+)?(?:' + ci_('sole') + '\\s+)?' + ci_('executor')),
+      new RegExp(ci_('appoint') + '\\s+(?:' + ci_('my') + '\\s+[a-z]+,?\\s+)?' + NAME_RE + '[^.]{0,40}?' + ci_('as') + '\\s+(?:(?:' + ci_('my') + '|' + ci_('the') + '|' + ci_('sole') + ')\\s+){0,2}' + ci_('executor')),
       new RegExp(ci_('nominate') + '\\s+(?:' + ci_('my') + '\\s+[a-z]+,?\\s+)?' + NAME_RE),
-      new RegExp(ci_('executor') + '\\s*[:\\-]\\s*' + NAME_RE)
+      new RegExp('(?:' + ci_('primary') + '\\s+)?' + ci_('executor') + '[^\\S\\n]*(?:\\([^)]{0,30}\\))?[^\\S\\n]*[:\\-][^\\S\\n]*' + NAME_RE)
     ]),
     successor_executor: lx_first_(text, [
-      new RegExp('(?:' + ci_('successor') + '|' + ci_('alternate') + '|' + ci_('backup') + '|' + ci_('substitute') + ')\\s+' + ci_('executor') + '[^A-Za-z]{0,20}' + NAME_RE),
+      new RegExp('(?:' + ci_('successor') + '|' + ci_('alternate') + '|' + ci_('backup') + '|' + ci_('substitute') + ')\\s+' + ci_('executor') + '[^A-Za-z\\n]{0,20}' + NAME_RE),
       new RegExp(NAME_RE + '\\s+' + ci_('as successor executor'))
     ]),
     residuary_clause: lx_has_(text, /[Rr]esiduary|[Rr]esidue(?:\s+and\s+remainder)?|[Rr]est,?\s+residue|[Rr]emainder of my estate|[Aa]ll the rest/i),
     guardian_named: lx_has_(text, /[Gg]uardian/i),
     guardian_name: lx_first_(text, [
-      new RegExp(ci_('appoint') + '\\s+(?:' + ci_('my') + '\\s+[a-z]+,?\\s+)?' + NAME_RE + '[^.]{0,40}?' + ci_('as') + '[^.]{0,20}?' + ci_('guardian')),
+      new RegExp('(?:' + ci_('appoint') + '|' + ci_('nominate') + ')\\s+(?:' + ci_('my') + '\\s+[a-z]+,?\\s+)?' + NAME_RE + '[^.]{0,40}?' + ci_('as') + '[^.]{0,25}?' + ci_('guardian')),
       new RegExp(ci_('guardian') + '[^A-Za-z]{0,20}' + NAME_RE)
     ]),
     pour_over_to_trust: lx_has_(text, /[Pp]our[- ]?over|to the [Tt]rustee of[^.]{0,60}[Tt]rust/i),
@@ -218,11 +224,11 @@ function extractTrust_(text) {
     settlor: lx_first_(text, [
       new RegExp('(?:' + ci_('made') + '|' + ci_('dated') + ')[^.]{0,40}?,?\\s+' + ci_('by') + '\\s+' + NAME_RE),
       new RegExp('\\bI,\\s+' + NAME_RE + '[^.]{0,60}?(?:' + ci_('settlor') + '|' + ci_('grantor') + ')'),
-      new RegExp('(?:' + ci_('settlor') + '|' + ci_('grantor') + '|' + ci_('trustor') + ')\\s*[:\\-]\\s*' + NAME_RE)
+      new RegExp('(?:' + ci_('settlor') + '|' + ci_('grantor') + '|' + ci_('trustor') + ')[ \\t]*[:\\-][ \\t]*' + NAME_RE)
     ]),
     trustee: lx_first_(text, [
       new RegExp(NAME_RE + '\\s+' + ci_('shall serve as') + '\\s+(?:' + ci_('the') + '\\s+)?' + ci_('trustee')),
-      new RegExp('(?:' + ci_('initial') + '\\s+)?' + ci_('trustee') + '\\s*[:\\-]\\s*' + NAME_RE),
+      new RegExp('(?:' + ci_('initial') + '\\s+)?' + ci_('trustee') + '[ \\t]*[:\\-][ \\t]*' + NAME_RE),
       new RegExp(ci_('appoint') + '\\s+' + NAME_RE + '[^.]{0,30}' + ci_('as') + '\\s+(?:' + ci_('the') + '\\s+)?' + ci_('trustee'))
     ]),
     successor_trustee: lx_first_(text, [
@@ -240,11 +246,13 @@ function extractAd_(text) {
   return {
     agent: lx_first_(text, [
       new RegExp('(?:' + ci_('appoint') + '|' + ci_('designate') + ')\\s+(?:' + ci_('my') + '\\s+[a-z]+,?\\s+)?' + NAME_RE + '[^.]{0,80}?' + ci_('as my') + '\\s+(?:' + ci_('health care') + '|' + ci_('healthcare') + ')\\s+' + ci_('agent')),
-      new RegExp('(?:' + ci_('health care') + '|' + ci_('healthcare') + ')\\s+' + ci_('agent') + '\\s*[:\\-]\\s*' + NAME_RE),
-      new RegExp('(?:^|\\n)\\s*' + ci_('agent') + '\\s*[:\\-]\\s*' + NAME_RE)
+      new RegExp('(?:' + ci_('primary') + '\\s+)?(?:' + ci_('health care') + '|' + ci_('healthcare') + ')\\s+' + ci_('agent')
+        + '[^\\S\\n]*(?:\\([^)]{0,30}\\))?[^\\S\\n]*[:\\-][^\\S\\n]*' + NAME_RE),
+      new RegExp('(?:^|\\n)\\s*' + ci_('agent') + '[ \\t]*[:\\-][ \\t]*' + NAME_RE)
     ]),
     alternate_agent: lx_first_(text, [
-      new RegExp('(?:' + ci_('alternate') + '|' + ci_('successor') + '|' + ci_('backup') + '|' + ci_('substitute') + ')\\s+(?:(?:' + ci_('health care') + '|' + ci_('healthcare') + ')\\s+)?' + ci_('agent') + '\\s*[:\\-]?\\s*' + NAME_RE)
+      new RegExp('(?:' + ci_('alternate') + '|' + ci_('successor') + '|' + ci_('backup') + '|' + ci_('substitute') + ')\\s+(?:(?:' + ci_('health care') + '|' + ci_('healthcare') + ')\\s+)?' + ci_('agent')
+        + '[^\\S\\n]*(?:\\([^)]{0,30}\\))?[^\\S\\n]*[:\\-]?[^\\S\\n]*' + NAME_RE)
     ]),
     witness_count: countWitnessSlots_(text),
     notarized: lx_has_(text, /[Nn]otary [Pp]ublic|[Jj]ustice of the [Pp]eace|subscribed and sworn|[Aa]cknowledged before me/i),
@@ -262,13 +270,14 @@ function extractPoa_(text) {
   if (lx_has_(text, /[Rr]ight of survivorship/i)) hot.push('create or change survivorship rights');
 
   var alt = lx_first_(text, [
-    new RegExp('(?:' + ci_('successor') + '|' + ci_('alternate') + '|' + ci_('backup') + '|' + ci_('substitute') + ')\\s+' + ci_('agent') + '\\s*[:\\-]?\\s*' + NAME_RE)
+    new RegExp('(?:' + ci_('successor') + '|' + ci_('alternate') + '|' + ci_('backup') + '|' + ci_('substitute') + ')\\s+' + ci_('agent') + '[ \\t]*[:\\-]?[ \\t]*' + NAME_RE)
   ]);
 
   return {
     agent: lx_first_(text, [
       new RegExp('(?:' + ci_('appoint') + '|' + ci_('designate') + ')\\s+(?:' + ci_('my') + '\\s+[a-z]+,?\\s+)?' + NAME_RE + '[^.]{0,80}?' + ci_('as my') + '\\s+(?:' + ci_('agent') + '|' + ci_('attorney-in-fact') + ')'),
-      new RegExp('(?:^|\\n)\\s*' + ci_('agent') + '\\s*[:\\-]\\s*' + NAME_RE)
+      new RegExp('(?:^|\\n)[^\\S\\n]*(?:' + ci_('primary') + '[^\\S\\n]+)?' + ci_('agent')
+        + '[^\\S\\n]*(?:\\([^)]{0,30}\\))?[^\\S\\n]*[:\\-][^\\S\\n]*' + NAME_RE)
     ]),
     alternate_agent: alt,
     // rules.js and strategy.js historically read successor_agent; keep both keys
@@ -355,7 +364,7 @@ function localExtract_(rawText, filename) {
     confidence: cls.confidence,
     person_primary: lx_first_(text, [
       new RegExp('\\bI,\\s+' + NAME_RE),
-      new RegExp('(?:' + ci_('testator') + '|' + ci_('principal') + '|' + ci_('settlor') + ')\\s*[:\\-]\\s*' + NAME_RE),
+      new RegExp('(?:' + ci_('testator') + '|' + ci_('principal') + '|' + ci_('settlor') + ')[ \\t]*[:\\-][ \\t]*' + NAME_RE),
       new RegExp(NAME_RE + ',\\s*(?:' + ci_('testator') + '|' + ci_('principal') + '|' + ci_('settlor') + ')')
     ]),
     spouse: people.spouse,
